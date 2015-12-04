@@ -4,7 +4,7 @@ import struct
 
 def WordTo3Byte():
 
-    u16word = 0xfff5
+    u16word = 0x7356
     
     
     u8Byte = [0x00,0x00,0x00]
@@ -14,13 +14,14 @@ def WordTo3Byte():
    
     # s to 2 B (byte)element
     u16wByte0, u16wByte1 =  struct.unpack("2B", u16Data)
+    #8bL, 8bH = 16w
 
     #move to u8B[2]    ok
     u8Byte[2] = u16wByte1 >> 6
 
-    #move to u8B[0] ok
-    print (hex(u16wByte0))
-    print ( hex(u16wByte0 & 0x7f ) )
+    #move to u8B[0]    ok
+    u8Byte[0] = u16wByte0 & 0x7f
+
             
     #move to u8B[1]
             
@@ -28,7 +29,7 @@ def WordTo3Byte():
     u16Data = struct.pack("H", u16word)
     print ( u16Data )
     u16wByte0, u16wByte1 =  struct.unpack("2B", u16Data)
-    u8Byte[1] = u16wByte0
+    u8Byte[1] = u16wByte1
     
  
     print (u8Byte[2])
