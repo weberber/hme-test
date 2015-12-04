@@ -23,17 +23,13 @@ def WordTo3Byte():
     u8Byte[0] = u16wByte0 & 0x7f
 
             
-    #move to u8B[1]
-            
+    #move to u8B[1]          
     u16word = ( u16word << 1) & 0x7f00
     u16Data = struct.pack("H", u16word)
-    print ( u16Data )
     u16wByte0, u16wByte1 =  struct.unpack("2B", u16Data)
     u8Byte[1] = u16wByte1
     
  
-    print (u8Byte[2])
-    print (u8Byte[1])
     print (hex(u8Byte[2]) )  
     print (hex(u8Byte[1]) )
     print (hex(u8Byte[0]) )
