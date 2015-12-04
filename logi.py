@@ -50,12 +50,17 @@ def SerialWR(DataWr):
 	ser.open()
 	
 	if ser.isOpen():
+	
 			print ("USB0 is OK")
+			
+			#Wire Block
 			print ("Wire is Start") 
 			#ser.write('\x80\x01\x00\x00\x32\x01\x00\x00\x00\x00\x00\x01\x00\x00\x35\x01\x00') 
 			ser.write(DataWr[:])
+			#Wire Block End
 			
 			'''
+			#Read Block
 			i = 0
 
 			print ("Read is Start")  
@@ -66,15 +71,18 @@ def SerialWR(DataWr):
 					i = i + 1
 					print (   time.time() - tStart )
 					print ( i )
+			#Read Block End
 			'''
 	print ("Wire&Read is Over")     
 
 	ser.close()
 	return 
+
 	
 	
 def Client485():
-
+	DataOut = []
+	CommTab_list = [0, 0, 17, 18, 33, 34, 49, 50]
 	Header = 0x80	
 	#D_ID = Deivce id
 	D_ID = 0x00;
@@ -83,14 +91,33 @@ def Client485():
 	#DataNum
 	DataNum = 0x00
 	#Addr
-	Addr = 0x00
+	Addr_list = [0xff01,0xffff]
 	#DataIn
 	DataIn = 0x00
 	#Mask
 	Mask = 0x00
 	
+	#CommId = CommTab_list[Func]
+	#DataOut = DataOut + list(Header) + list( WordTo3Byte(D_ID) )
+	
+	DataOut.append(Header) 
+	DataOut = DataOut + WordTo3Byte(D_ID)
+	DataOut.append( (CommTab_list[Func] & 0x7f) )
+	DataOut = DataOut + WordTo3Byte(DataNum)
+
+
+	for i in range(0,len(Addr_list)):
+		print (i)
+		DataOut =  DataOut + WordTo3Byte(Addr_list[i]) 
+		
+	#print ( DataOut = DataOut + WordTo3Byte(Addr_list[0]) for i in (Addr_list ] )
+	#DataOut.append()
+	#DataOut.append()
+	
+	print( DataOut )
 	
 if __name__ == '__main__':
     
 	print ( WordTo3Byte(0x75f3) )
-	SerialWR([0x80,0x01,0x00,0x00,0x32,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x35,0x01,0x00])
+	#SerialWR([0x80,0x01,0x00,0x00,0x32,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x35,0x01,0x00])
+	Client485()
