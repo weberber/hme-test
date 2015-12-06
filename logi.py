@@ -104,10 +104,8 @@ def Client485():
 	DataOut = DataOut + WordTo3Byte(D_ID)
 	DataOut.append( (CommTab_list[Func] & 0x7f) )
 	DataOut = DataOut + WordTo3Byte(DataNum)
-
-
+	#add Addr_list
 	for i in range(0,len(Addr_list)):
-		print (i)
 		DataOut =  DataOut + WordTo3Byte(Addr_list[i]) 
 		
 	#print ( DataOut = DataOut + WordTo3Byte(Addr_list[0]) for i in (Addr_list ] )
