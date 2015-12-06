@@ -88,17 +88,17 @@ def Client485():
 	CommTab_list = [0, 0, 17, 18, 33, 34, 49, 50]
 	Header = 0x80	
 	#D_ID = Deivce id
-	D_ID = 0x00;
+	D_ID = 0x01;
 	#Func = Function ID , 00=Intl
-	Func = 0x00
+	Func = 0x07
 	#DataNum
-	DataNum = 0x00
+	DataNum = 0x01
 	#Addr
-	Addr_list = [0xff01,0xffff]	#test
+	Addr_list = [0x0]	#test
 	#DataIn
-	DataIn_list = [0xff01,0xf355]	#test
+	DataIn_list = [0x01]	#test
 	#Mask
-	Mask_list = [0xff01, 0x5238] #test
+	Mask_list = [] #test
 	
 	#CommId = CommTab_list[Func]
 	#DataOut = DataOut + list(Header) + list( WordTo3Byte(D_ID) )
@@ -125,12 +125,11 @@ def Client485():
 	print ([hex(i) for i in DataOut])
 	
 	#add ChkSum
-	#DataOut to U16
-	#u8list to u16list
-	for i in range(0,len(DataOut)//2):
-		u16ChkSum = u16ChkSum + ((DataOut[i*2]<<8)+DataOut[(i*2)+1])
+	for i in range(0,len(DataOut)):
+		u16ChkSum = u16ChkSum + DataOut[i]
 	#16bit Mask
 	u16ChkSum = u16ChkSum & 0xffff	
+	print (u16ChkSum)
 	DataOut = DataOut + WordTo3Byte(u16ChkSum)
 	
 	print ([hex(i) for i in DataOut])
@@ -146,4 +145,6 @@ if __name__ == '__main__':
     
 	print ( WordTo3Byte(0x75f3) )
 	#SerialWR([0x80,0x01,0x00,0x00,0x32,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x35,0x01,0x00])
-	Client485()
+	print(Client485())
+	SerialWR(Client485())
+	#SerialWR ([128, 1, 0, 0, 50, 1, 0, 0, 0, 0, 0, 1, 0, 0, 53, 1, 0])
