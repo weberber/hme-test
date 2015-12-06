@@ -124,24 +124,23 @@ def Client485():
 	print( DataOut )
 	print ([hex(i) for i in DataOut])
 	
+	#add ChkSum
 	#DataOut to U16
-	#print([DataOut[i*2]+DataOut[i+1] for i in DataOut ])
-	u16test2 = []
 	#u8list to u16list
 	for i in range(0,len(DataOut)//2):
-		#u16test2.append((DataOut[i*2]<<8)+DataOut[(i*2)+1])
 		u16ChkSum = u16ChkSum + ((DataOut[i*2]<<8)+DataOut[(i*2)+1])
-	print (u16ChkSum)
-	print (u16test2)
-	print ([hex(i) for i in u16test2])
+	#16bit Mask
+	u16ChkSum = u16ChkSum & 0xffff	
+	DataOut = DataOut + WordTo3Byte(u16ChkSum)
+	
+	print ([hex(i) for i in DataOut])
 	#for i in range(0,len(DataOut)):
 	#	u16DataOut_list.append( struct.pack('H', (DataOut[i]*0x100)+DataOut[i+1]]  ) 
 		
-	u16test= bytearray(DataOut)	
-	#u16test = struct.pack('H', DataOut)
-	#for i in range(0,len(DataOut)):
-	#	u16DataOut_list.append( struct.pack('H', DataOut[i]) ) 	
-	print( 	u16DataOut_list )
+	#u16test= bytearray(DataOut)	
+	
+	return DataOut
+
 	
 if __name__ == '__main__':
     
