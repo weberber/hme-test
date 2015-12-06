@@ -82,6 +82,9 @@ def SerialWR(DataWr):
 	
 def Client485():
 	DataOut = []
+	u16DataOut_list = []
+	u16ChkSum = 0
+
 	CommTab_list = [0, 0, 17, 18, 33, 34, 49, 50]
 	Header = 0x80	
 	#D_ID = Deivce id
@@ -91,28 +94,54 @@ def Client485():
 	#DataNum
 	DataNum = 0x00
 	#Addr
-	Addr_list = [0xff01,0xffff]
+	Addr_list = [0xff01,0xffff]	#test
 	#DataIn
-	DataIn = 0x00
+	DataIn_list = [0xff01,0xf355]	#test
 	#Mask
-	Mask = 0x00
+	Mask_list = [0xff01, 0x5238] #test
 	
 	#CommId = CommTab_list[Func]
 	#DataOut = DataOut + list(Header) + list( WordTo3Byte(D_ID) )
 	
+	#add Header
 	DataOut.append(Header) 
+	#add ID
 	DataOut = DataOut + WordTo3Byte(D_ID)
+	#add Command Table (Func)
 	DataOut.append( (CommTab_list[Func] & 0x7f) )
+	#add DataNum
 	DataOut = DataOut + WordTo3Byte(DataNum)
 	#add Addr_list
 	for i in range(0,len(Addr_list)):
 		DataOut =  DataOut + WordTo3Byte(Addr_list[i]) 
-		
-	#print ( DataOut = DataOut + WordTo3Byte(Addr_list[0]) for i in (Addr_list ] )
-	#DataOut.append()
-	#DataOut.append()
+	#add DataIn
+	for i in range(0,len(DataIn_list)):
+		DataOut =  DataOut + WordTo3Byte(DataIn_list[i]) 
+	#add Mask_list
+	for i in range(0,len(Mask_list)):
+		DataOut =  DataOut + WordTo3Byte(Mask_list[i]) 
 	
 	print( DataOut )
+	print ([hex(i) for i in DataOut])
+	
+	#DataOut to U16
+	#print([DataOut[i*2]+DataOut[i+1] for i in DataOut ])
+	u16test2 = []
+	#u8list to u16list
+	for i in range(0,len(DataOut)//2):
+		#u16test2.append((DataOut[i*2]<<8)+DataOut[(i*2)+1])
+		u16ChkSum = u16ChkSum + ((DataOut[i*2]<<8)+DataOut[(i*2)+1])
+	print (u16ChkSum)
+	print (u16test2)
+	print ([hex(i) for i in u16test2])
+	#for i in range(0,len(DataOut)):
+	#	u16DataOut_list.append( struct.pack('H', (DataOut[i]*0x100)+DataOut[i+1]]  ) 
+		
+	u16test= bytearray(DataOut)	
+	#u16test = struct.pack('H', DataOut)
+	#for i in range(0,len(DataOut)):
+	#	u16DataOut_list.append( struct.pack('H', DataOut[i]) ) 	
+	print( 	u16DataOut_list )
 	
 if __name__ == '__main__':
     
