@@ -38,7 +38,7 @@ def WordTo3Byte(u16word):
 	
     return u8Byte
 
-def SerialWR(DataWr):
+def SerialWR(DataWr_list, Func, DataNum):
 	
 	ser = serial.Serial()
 	#ser.port = "/dev/ttyUSB0"
@@ -56,23 +56,33 @@ def SerialWR(DataWr):
 			#Wire Block
 			print ("Wire is Start") 
 			#ser.write('\x80\x01\x00\x00\x32\x01\x00\x00\x00\x00\x00\x01\x00\x00\x35\x01\x00') 
-			ser.write(DataWr[:])
+			ser.write(DataWr_list[:])
 			#Wire Block End
 			
-			'''
+			
 			#Read Block
-			i = 0
-
+			DataRd_list = []
+			RdBytesLen = 0
+			RdBytesLenSum = 0 
+			if(Func == 'WordRd' or Func == 'DiscWord'):
+				ResponseNum = (DataNum * 3) + 8
+			else:
+				ResponseNum = 8
+				
 			print ("Read is Start")  
 			tStart = time.time()
-			while( (1 > ( time.time() - tStart )) ):
-					if ser2.inWaiting():
-							print ( ser2.read(ser2.inWaiting()) )
-					i = i + 1
-					print (   time.time() - tStart )
-					print ( i )
+			while((0.05 > (time.time()-tStart)) and RdBytesLenSum < ResponseNum):
+				
+				if ser.inWaiting():
+					RdBytesLen = ser.inWaiting()
+					DataRd_list.append(ser.read(RdBytesLen))
+					RdBytesLenSum += RdBytesLen
+					print (time.time() - tStart)	
+					print (ResponseNum)		
+					
+			print (DataRd_list)		
 			#Read Block End
-			'''
+			
 	print ("Wire&Read is Over")     
 
 	ser.close()
@@ -324,10 +334,12 @@ def TestPP(N):
 
 def TestPj():
 	DevID = 0x01
+	Func = 'WordWt'
+	DataNum = 1
 	#Test Addr Range = 200~1000
 	#ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list)
-	DW = ClientOp(DevID, 'WordWt', 1, [200], [0x01],[])
-	SerialWR(DW)
+	DW = ClientOp(DevID, Func, DataNum, [200], [0x05],[])
+	SerialWR(DW, Func, DataNum)
 	
 if __name__ == '__main__':
     
