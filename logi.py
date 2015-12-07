@@ -38,7 +38,7 @@ def WordTo3Byte(u16word):
 	
     return u8Byte
 
-def SerialWR(DataWr_list, Func, DataNum):
+def SerialWR(DevID, DataWr_list, Func, DataNum):
 	
 	ser = serial.Serial()
 	#ser.port = "/dev/ttyUSB0"
@@ -46,6 +46,8 @@ def SerialWR(DataWr_list, Func, DataNum):
 	ser.baudrate = 115200
 	ser.timeout = None
 	#not stop
+	FuncCommTable = {'Inital':0, 'Close':0, 'BitModify':17, 'BitInv':18, 'WordRd':33, 'DisWordRd':34, 
+					'WordWt':49, 'DisWordWt':50}
 	
 	ser.open()
 	
@@ -103,14 +105,19 @@ def SerialWR(DataWr_list, Func, DataNum):
 			ChkSum_list = DataRd_list[len(DataRd_list)-3:len(DataRd_list)]
 			u16ReChkSum = sum(RespData_list) & 0xffff
 			u8ReChkSum_list = WordTo3Byte(u16ReChkSum)			
-			print('ReD_L=',RespData_list)
-			print('Chk_L=',ChkSum_list)
-			print('16ReChk=', u16ReChkSum)		
-			print( 'ReChk_L=', u8ReChkSum_list)
-			
-			if(ChkSum_list == u8ReChkSum_list):
+			#print('ReD_L=',RespData_list)
+			#print('Chk_L=',ChkSum_list)
+			#print('16ReChk=', u16ReChkSum)		
+			#print( 'ReChk_L=', u8ReChkSum_list)			
+			if(ChkSum_list != u8ReChkSum_list):
 				RdError_list.append('ChkSumErr')
 			
+			#Check FormatErr
+			#RespData_list = DataRd_list[0:len(DataRd_list)-3]
+			HeadIdComm_list = RespData_list[0:5]
+			print('HIC_L=',HeadIdComm_list)					
+			if(HeadIdComm_list[0] != 0xc0 or HeadIdComm_list[1:4] != WordTo3Byte(DevID) or FuncCommTable[Func] != HeadIdComm_list[4] ) :
+				RdError_list.append('FormatErr')
 			
 					
 			print (DataRd_list)		
@@ -374,7 +381,7 @@ def TestPj():
 	#Test Addr Range = 200~1000
 	#ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list)
 	DW = ClientOp(DevID, Func, DataNum, [200], [0x05],[])
-	SerialWR(DW, Func, DataNum)
+	SerialWR(DevID, DW, Func, DataNum)
 	
 if __name__ == '__main__':
     
