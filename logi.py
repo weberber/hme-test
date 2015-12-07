@@ -90,68 +90,128 @@ class ClientDataWR:
 			self.Header = 0x80
 			self.FuncCommTable = {'Inital':0, 'Close':0, 'BitModify':17, 'BitInv':18, 'WordRd':33, 'DisWordRd':34, 
 					'WordWt':49, 'DisWordWt':50}			
-			self.DataOut = []
+			self.DataOut_list = []
 			self.u16DataOut_list = []
 			self.u16ChkSum = 0
 						
 		def DisWordWt(self):
 			
-			DataOut.append(Header) 
-			DataOut = DataOut + WordTo3Byte(D_ID)
-			DataOut.append( (self.FuncCommTable[DisWordWt] & 0x7f) )
-			DataOut = DataOut + WordTo3Byte(DataNum)
+			DataOut_list.append(Header) 
+			DataOut_list = DataOut_list + WordTo3Byte(D_ID)
+			DataOut_list.append( (self.FuncCommTable[DisWordWt] & 0x7f) )
+			DataOut_list = DataOut_list + WordTo3Byte(DataNum)
 			for i in range(0,len(Addr_list)):
-				DataOut =  DataOut + WordTo3Byte(Addr_list[i]) 
+				DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
 			for i in range(0,len(DataIn_list)):
-				DataOut =  DataOut + WordTo3Byte(DataIn_list[i]) 
+				DataOut_list =  DataOut_list + WordTo3Byte(DataIn_list[i]) 
 			for i in range(0,len(Mask_list)):
-				DataOut =  DataOut + WordTo3Byte(Mask_list[i]) 
-			for i in range(0,len(DataOut)):
-				u16ChkSum = u16ChkSum + DataOut[i]
+				DataOut_list =  DataOut_list + WordTo3Byte(Mask_list[i]) 
+			for i in range(0,len(DataOut_list)):
+				u16ChkSum = u16ChkSum + DataOut_list[i]
 			u16ChkSum = u16ChkSum & 0xffff	
-			DataOut = DataOut + WordTo3Byte(u16ChkSum)
+			DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
 	
-			print(DataOut)
-			return DataOut
+			print(DataOut_list)
+			return DataOut_list
+			
 
+'''
+ClientOp()
+	|---CopDiscWordWt
+	|---CopBitModify
+	|---CopBitInv
+	|---CopWordRd
+	|---CopWordWt
+'''
 def CopDiscWordWt(DevID, FuncCT, DataNum, Addr_list, DataIn_list):
 	Header = 0x80
-	DataOut = []
+	DataOut_list = []
 	u16ChkSum = 0
-	DataOut.append(Header) 
-	DataOut = DataOut + WordTo3Byte(DevID)
-	DataOut.append( FuncCT )
-	DataOut = DataOut + WordTo3Byte(DataNum)
+	DataOut_list.append(Header) 
+	DataOut_list = DataOut_list + WordTo3Byte(DevID)
+	DataOut_list.append( FuncCT )
+	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
 	for i in range(0,len(Addr_list)):
-		DataOut =  DataOut + WordTo3Byte(Addr_list[i]) 
+		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
 	for i in range(0,len(DataIn_list)):
-		DataOut =  DataOut + WordTo3Byte(DataIn_list[i]) 
-	for i in range(0,len(DataOut)):
-		u16ChkSum = u16ChkSum + DataOut[i]
+		DataOut_list =  DataOut_list + WordTo3Byte(DataIn_list[i]) 
+	for i in range(0,len(DataOut_list)):
+		u16ChkSum = u16ChkSum + DataOut_list[i]
 	u16ChkSum = u16ChkSum & 0xffff	
-	DataOut = DataOut + WordTo3Byte(u16ChkSum)
-	return DataOut
+	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
+	return DataOut_list
 	
 def CopBitModify(DevID, FuncCT, DataNum, Addr_list, DataIn_list, Mask_list):
 	Header = 0x80
-	DataOut = []
+	DataOut_list = []
 	u16ChkSum = 0
-	DataOut.append(Header) 
-	DataOut = DataOut + WordTo3Byte(DevID)
-	DataOut.append( FuncCT )
-	DataOut = DataOut + WordTo3Byte(DataNum)
+	DataOut_list.append(Header) 
+	DataOut_list = DataOut_list + WordTo3Byte(DevID)
+	DataOut_list.append( FuncCT )
+	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
 	for i in range(0,len(Addr_list)):
-		DataOut =  DataOut + WordTo3Byte(Addr_list[i]) 
+		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
 	for i in range(0,len(DataIn_list)):
-		DataOut =  DataOut + WordTo3Byte(DataIn_list[i]) 
+		DataOut_list =  DataOut_list + WordTo3Byte(DataIn_list[i]) 
 	for i in range(0,len(Mask_list)):
-		DataOut =  DataOut + WordTo3Byte(Mask_list[i]) 
-	for i in range(0,len(DataOut)):
-		u16ChkSum = u16ChkSum + DataOut[i]
+		DataOut_list =  DataOut_list + WordTo3Byte(Mask_list[i]) 
+	for i in range(0,len(DataOut_list)):
+		u16ChkSum = u16ChkSum + DataOut_list[i]
 	u16ChkSum = u16ChkSum & 0xffff	
-	DataOut = DataOut + WordTo3Byte(u16ChkSum)
-	return DataOut		
-			
+	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
+	return DataOut_list		
+	
+def CopBitInv(DevID, FuncCT, DataNum, Addr_list, Mask_list):
+	Header = 0x80
+	DataOut_list = []
+	u16ChkSum = 0
+	DataOut_list.append(Header) 
+	DataOut_list = DataOut_list + WordTo3Byte(DevID)
+	DataOut_list.append( FuncCT )
+	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
+	for i in range(0,len(Addr_list)):
+		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
+	for i in range(0,len(Mask_list)):
+		DataOut_list =  DataOut_list + WordTo3Byte(Mask_list[i]) 
+	for i in range(0,len(DataOut_list)):
+		u16ChkSum = u16ChkSum + DataOut_list[i]
+	u16ChkSum = u16ChkSum & 0xffff	
+	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
+	return DataOut_list		
+	
+def CopWordRd(DevID, FuncCT, DataNum, Addr_list):
+	Header = 0x80
+	DataOut_list = []
+	u16ChkSum = 0
+	DataOut_list.append(Header) 
+	DataOut_list = DataOut_list + WordTo3Byte(DevID)
+	DataOut_list.append( FuncCT )
+	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
+	DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[0]) 
+	for i in range(0,len(DataOut_list)):
+		u16ChkSum = u16ChkSum + DataOut_list[i]
+	u16ChkSum = u16ChkSum & 0xffff	
+	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
+	return DataOut_list		
+
+def CopWordWt(DevID, FuncCT, DataNum, Addr_list, DataIn_list):
+	Header = 0x80
+	DataOut_list = []
+	u16ChkSum = 0
+	DataOut_list.append(Header) 
+	DataOut_list = DataOut_list + WordTo3Byte(DevID)
+	DataOut_list.append( FuncCT )
+	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
+	for i in range(0,len(Addr_list)):
+		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
+	for i in range(0,len(DataIn_list)):
+		DataOut_list =  DataOut_list + WordTo3Byte(DataIn_list[i]) 
+	for i in range(0,len(DataOut_list)):
+		u16ChkSum = u16ChkSum + DataOut_list[i]
+	u16ChkSum = u16ChkSum & 0xffff	
+	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
+	return DataOut_list	
+	
 def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list):
 
 	#CommTab_list = [0, 0, 17, 18, 33, 34, 49, 50]
@@ -159,15 +219,37 @@ def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list):
 					'WordWt':49, 'DiscWordWt':50}
 
 	if(Func == 'DiscWordWt'):
-		print('Out:')
+		print('DiscWordWt Out:')
 		print(CopDiscWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list))
+		return(CopDiscWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list))
+	elif(Func == 'BitModify'):
+		print('BitModify Out:')
+		print(CopBitModify(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list, Mask_list))
+		return(CopBitModify(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list, Mask_list))
+	elif(Func == 'BitInv'):
+		print('BitInv Out:')
+		print(CopBitInv(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, Mask_list))
+		return(CopBitInv(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, Mask_list))
+	elif(Func == 'WordRd'):
+		print('WordRd Out:')
+		print(CopWordRd(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list))
+		return(CopWordRd(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list))
+	elif(Func == 'DiscWordRd'):
+		print('DiscWordRd Out:')
+		return()
+	elif(Func == 'WordWt'):
+		print('WordWt Out:')	
+		print(CopWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list))
+		return(CopWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list))
 	else:
 		print('ERROR')
-	return()
+		return()
+	
+	
 			
 	
 def Client485():
-	DataOut = []
+	DataOut_list = []
 	u16DataOut_list = []
 	u16ChkSum = 0
 	#CommTab_list = [0, 0, 17, 18, 33, 34, 49, 50]
@@ -189,42 +271,42 @@ def Client485():
 	Mask_list = [] #test
 	
 	#CommId = CommTab_list[Func]
-	#DataOut = DataOut + list(Header) + list( WordTo3Byte(D_ID) )
+	#DataOut_list = DataOut_list + list(Header) + list( WordTo3Byte(D_ID) )
 	
 	#add Header
-	DataOut.append(Header) 
+	DataOut_list.append(Header) 
 	#add ID
-	DataOut = DataOut + WordTo3Byte(D_ID)
+	DataOut_list = DataOut_list + WordTo3Byte(D_ID)
 	#add Command Table (Func)
-	#DataOut.append( (CommTab_list[Func] & 0x7f) )
-	DataOut.append( (FuncCommTable[Func] & 0x7f) )
+	#DataOut_list.append( (CommTab_list[Func] & 0x7f) )
+	DataOut_list.append( (FuncCommTable[Func] & 0x7f) )
 	#add DataNum
-	DataOut = DataOut + WordTo3Byte(DataNum)
+	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
 	#add Addr_list
 	for i in range(0,len(Addr_list)):
-		DataOut =  DataOut + WordTo3Byte(Addr_list[i]) 
+		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
 	#add DataIn
 	for i in range(0,len(DataIn_list)):
-		DataOut =  DataOut + WordTo3Byte(DataIn_list[i]) 
+		DataOut_list =  DataOut_list + WordTo3Byte(DataIn_list[i]) 
 	#add Mask_list
 	for i in range(0,len(Mask_list)):
-		DataOut =  DataOut + WordTo3Byte(Mask_list[i]) 
+		DataOut_list =  DataOut_list + WordTo3Byte(Mask_list[i]) 
 	
-	print( DataOut )
-	print ([hex(i) for i in DataOut])
+	print( DataOut_list )
+	print ([hex(i) for i in DataOut_list])
 	
 	#add ChkSum
-	for i in range(0,len(DataOut)):
-		u16ChkSum = u16ChkSum + DataOut[i]
+	for i in range(0,len(DataOut_list)):
+		u16ChkSum = u16ChkSum + DataOut_list[i]
 	#16bit Mask
 	u16ChkSum = u16ChkSum & 0xffff	
 	print (u16ChkSum)
-	DataOut = DataOut + WordTo3Byte(u16ChkSum)
+	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
 	
 	
-	#print ([hex(i) for i in DataOut])
-	print(DataOut)
-	return DataOut
+	#print ([hex(i) for i in DataOut_list])
+	print(DataOut_list)
+	return DataOut_list
 
 def TestP0():
 	print(0)
@@ -240,6 +322,12 @@ def TestPP(N):
 			}
 	return Ptable[N]
 
+def TestPj():
+	DevID = 0x01
+	#Test Addr Range = 200~1000
+	#ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list)
+	DW = ClientOp(DevID, 'WordWt', 1, [200], [0x01],[])
+	SerialWR(DW)
 	
 if __name__ == '__main__':
     
@@ -247,6 +335,9 @@ if __name__ == '__main__':
 	#SerialWR([0x80,0x01,0x00,0x00,0x32,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x35,0x01,0x00])
 	print(Client485())
 	ClientOp(1, 'DiscWordWt', 1, [0x00], [0x01],[])
+	ClientOp(1, 'WordWt', 1, [0x00], [0x01],[])
+	TestPj()
+	
 	
 	#ClientDataWR(0x01, 1,  [0x00], [0x01], [])
 	#print(ClientDataWR.DisWordWt)
