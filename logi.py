@@ -51,7 +51,7 @@ def SerialWR(DataWr_list, Func, DataNum):
 	
 	if ser.isOpen():
 	
-			print ("USB0 is OK")
+			print (ser.port, "is OK")
 			
 			#Wire Block
 			print ("Wire is Start") 
@@ -71,26 +71,54 @@ def SerialWR(DataWr_list, Func, DataNum):
 			else:
 				ResponseNum = 8
 				
-			print ("Read is Start")  
+			print ("Read is Start")  			
 			tStart = time.time()
-			while(RdTimeOut != True and RdBytesLenSum < ResponseNum):
-				
+			while(RdTimeOut != True and RdBytesLenSum < ResponseNum):				
 				if ser.inWaiting():
 					RdBytesLen = ser.inWaiting()
-					DataRd_list.append(ser.read(RdBytesLen))
+					#DataRd_list = All Read Datas
+					DataRd=ser.read(RdBytesLen)
+					#Bytes to U8list
+					DataRd_list += (struct.unpack('%dB'%(RdBytesLen), DataRd))
 					RdBytesLenSum += RdBytesLen
-					print (time.time() - tStart)	
-					print (ResponseNum)		
+					print ('Time=', (time.time() - tStart)*1000,'ms')	
+					#print (ResponseNum)		
 				#Time Out	
 				if(0.05 < time.time()-tStart):	
 					RdTimeOut = True
-					RdError_list.append('TimeOut')
+					RdError_list.append('TimeOutErr')	
+			print('DataRd_list = ', DataRd_list)
+			#Read Over
+			
+			#Check RespNumErr
+			if(len(DataRd_list) != ResponseNum):
+				RdError_list.append('RespNumErr')
+				print(len(DataRd_list))
+				# !!
+				DataRd_list = []
+				#return()
+				
+			#Check ChkSumErr
+			RespData_list = DataRd_list[0:len(DataRd_list)-3]
+			ChkSum_list = DataRd_list[len(DataRd_list)-3:len(DataRd_list)]
+			u16ReChkSum = sum(RespData_list) & 0xffff
+			u8ReChkSum_list = WordTo3Byte(u16ReChkSum)			
+			print('ReD_L=',RespData_list)
+			print('Chk_L=',ChkSum_list)
+			print('16ReChk=', u16ReChkSum)		
+			print( 'ReChk_L=', u8ReChkSum_list)
+			
+			if(ChkSum_list == u8ReChkSum_list):
+				RdError_list.append('ChkSumErr')
+			
+			
 					
 			print (DataRd_list)		
 			#Read Block End
 			
 	print ("Wire&Read is Over")
-	print (RdError_list)
+	if(len(RdError_list)):
+		print (RdError_list)
 
 	ser.close()
 	return 
