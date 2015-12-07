@@ -2,14 +2,11 @@ import struct
 import serial
 import time
 
-
 def WordTo3Byte(u16word):
 
 #    u16word = 0x7356
      
     u8Byte = [0x00,0x00,0x00]
-
-    
     u16Data = struct.pack("H", u16word)
    
     # s to 2 B (byte)element
@@ -28,8 +25,6 @@ def WordTo3Byte(u16word):
     u16Data = struct.pack("H", u16word)
     u16wByte0, u16wByte1 =  struct.unpack("2B", u16Data)
     u8Byte[1] = u16wByte1
-    
-	
     #print (hex(u8Byte[2]) )  
     #print (hex(u8Byte[1]) )
     #print (hex(u8Byte[0]) )
@@ -37,12 +32,18 @@ def WordTo3Byte(u16word):
     #bin hex
 	
     return u8Byte
+	
+def u3ByteToWord(u3Byte):
+	#return(u3Byte[0] + (u3Byte[1]<<7) + (((u3Byte[1]>>1) + (u3Byte[2]<<6))* 0x100))
+	return(u3Byte[0] + ((u3Byte[1]<<7)&0xff) + (((u3Byte[1]>>1) + (u3Byte[2]<<6))* 0x100))
+	
 
 def SerialWR(DevID, DataWr_list, Func, DataNum):
+	u16ReData_list = []
 	
 	ser = serial.Serial()
 	#ser.port = "/dev/ttyUSB0"
-	ser.port = "COM15"
+	ser.port = "COM18"
 	ser.baudrate = 115200
 	ser.timeout = None
 	#not stop
@@ -111,24 +112,51 @@ def SerialWR(DevID, DataWr_list, Func, DataNum):
 			#print( 'ReChk_L=', u8ReChkSum_list)			
 			if(ChkSum_list != u8ReChkSum_list):
 				RdError_list.append('ChkSumErr')
-			
+				# !!
+				DataRd_list = []
+				
 			#Check FormatErr
 			#RespData_list = DataRd_list[0:len(DataRd_list)-3]
 			HeadIdComm_list = RespData_list[0:5]
 			print('HIC_L=',HeadIdComm_list)					
 			if(HeadIdComm_list[0] != 0xc0 or HeadIdComm_list[1:4] != WordTo3Byte(DevID) or FuncCommTable[Func] != HeadIdComm_list[4] ) :
 				RdError_list.append('FormatErr')
-			
-					
-			print (DataRd_list)		
+				# !!
+				DataRd_list = []
+				
+			#RAW to Data	
+			Re3BDataOut_list = []
+			BoolChk = 0
+			print('DR_L=',DataRd_list)			
+			ReData_list = DataRd_list[5:len(DataRd_list)-3]		
+			print('RD_L=',ReData_list)
+			print(DataRd_list)		
+			for i in range(0, (len(ReData_list)//3)):
+				Re3BDataOut_list.append(ReData_list[i*3:i*3+3] )
+			print('R3B_L=', Re3BDataOut_list)
+			#Chack FormatErr
+			for i in range(0, len(Re3BDataOut_list)):
+				BoolChk +=  (Re3BDataOut_list[i][0] & 0x80)
+				BoolChk +=  (Re3BDataOut_list[i][1] & 0x80)
+				BoolChk +=  (Re3BDataOut_list[i][2] & 0xfc)
+			if(BoolChk == 0):
+				#Ok
+				for i in range(0, len(Re3BDataOut_list)):
+					u16ReData_list.append(u3ByteToWord(Re3BDataOut_list[i]) )
+				print('Data = ',u16ReData_list)
+				print ('Data = ', [hex(i) for i in u16ReData_list])
+			else:
+				RdError_list.append('FormatErr')
+				#!!
+				DataRd_list = []
 			#Read Block End
-			
+						
 	print ("Wire&Read is Over")
 	if(len(RdError_list)):
 		print (RdError_list)
 
 	ser.close()
-	return 
+	return (u16ReData_list)
 	
 
 class ClientDataWR:
@@ -247,6 +275,7 @@ def CopWordRd(DevID, FuncCT, DataNum, Addr_list):
 	return DataOut_list		
 
 def CopWordWt(DevID, FuncCT, DataNum, Addr_list, DataIn_list):
+
 	Header = 0x80
 	DataOut_list = []
 	u16ChkSum = 0
@@ -263,6 +292,23 @@ def CopWordWt(DevID, FuncCT, DataNum, Addr_list, DataIn_list):
 	u16ChkSum = u16ChkSum & 0xffff	
 	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
 	return DataOut_list	
+
+def CopDiscWordRd(DevID, FuncCT, DataNum, Addr_list):
+	Header = 0x80
+	DataOut_list = []
+	u16ChkSum = 0
+	DataOut_list.append(Header) 
+	DataOut_list = DataOut_list + WordTo3Byte(DevID)
+	DataOut_list.append( FuncCT )
+	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
+	for i in range(0,len(Addr_list)):
+		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
+	for i in range(0,len(DataOut_list)):
+		u16ChkSum = u16ChkSum + DataOut_list[i]
+	u16ChkSum = u16ChkSum & 0xffff	
+	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
+	return DataOut_list		
+	
 	
 def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list):
 
@@ -271,27 +317,16 @@ def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list):
 					'WordWt':49, 'DiscWordWt':50}
 
 	if(Func == 'DiscWordWt'):
-		print('DiscWordWt Out:')
-		print(CopDiscWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list))
 		return(CopDiscWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list))
 	elif(Func == 'BitModify'):
-		print('BitModify Out:')
-		print(CopBitModify(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list, Mask_list))
 		return(CopBitModify(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list, Mask_list))
 	elif(Func == 'BitInv'):
-		print('BitInv Out:')
-		print(CopBitInv(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, Mask_list))
 		return(CopBitInv(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, Mask_list))
 	elif(Func == 'WordRd'):
-		print('WordRd Out:')
-		print(CopWordRd(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list))
 		return(CopWordRd(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list))
 	elif(Func == 'DiscWordRd'):
-		print('DiscWordRd Out:')
-		return()
+		return(CopDiscWordRd(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list))
 	elif(Func == 'WordWt'):
-		print('WordWt Out:')	
-		print(CopWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list))
 		return(CopWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list))
 	else:
 		print('ERROR')
@@ -377,11 +412,20 @@ def TestPP(N):
 def TestPj():
 	DevID = 0x01
 	Func = 'WordWt'
-	DataNum = 1
+	DataNum = 5
 	#Test Addr Range = 200~1000
 	#ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list)
-	DW = ClientOp(DevID, Func, DataNum, [200], [0x05],[])
+	DW = ClientOp(DevID, Func, DataNum, [200], [0xffff,0xeeee,0xfef,0xeee,0xffff],[])
 	SerialWR(DevID, DW, Func, DataNum)
+	
+def TestPj2():
+	DevID = 0x01
+	Func = 'WordRd'
+	DataNum = 5
+	#Test Addr Range = 200~1000
+	#ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list)
+	DW = ClientOp(DevID, Func, DataNum, [200],[],[])
+	print(SerialWR(DevID, DW, Func, DataNum))
 	
 if __name__ == '__main__':
     
@@ -391,17 +435,6 @@ if __name__ == '__main__':
 	ClientOp(1, 'DiscWordWt', 1, [0x00], [0x01],[])
 	ClientOp(1, 'WordWt', 1, [0x00], [0x01],[])
 	TestPj()
+	TestPj2()
+
 	
-	
-	#ClientDataWR(0x01, 1,  [0x00], [0x01], [])
-	#print(ClientDataWR.DisWordWt)
-	'''
-	DWR = ClientDataWR
-	DWR.DevID = 1
-	DWR.DataNum = 1
-	DWR.Addr_list = [0x00]
-	DWR.DataIn_list = [0x01]
-	DWR.Mask_list = []
-	print(DWR.DisWordWt)'''
-	#SerialWR(Client485())
-	#SerialWR ([128, 1, 0, 0, 50, 1, 0, 0, 0, 0, 0, 1, 0, 0, 53, 1, 0])
