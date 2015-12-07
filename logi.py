@@ -64,6 +64,8 @@ def SerialWR(DataWr_list, Func, DataNum):
 			DataRd_list = []
 			RdBytesLen = 0
 			RdBytesLenSum = 0 
+			RdError_list = []
+			RdTimeOut = False
 			if(Func == 'WordRd' or Func == 'DiscWord'):
 				ResponseNum = (DataNum * 3) + 8
 			else:
@@ -71,7 +73,7 @@ def SerialWR(DataWr_list, Func, DataNum):
 				
 			print ("Read is Start")  
 			tStart = time.time()
-			while((0.05 > (time.time()-tStart)) and RdBytesLenSum < ResponseNum):
+			while(RdTimeOut != True and RdBytesLenSum < ResponseNum):
 				
 				if ser.inWaiting():
 					RdBytesLen = ser.inWaiting()
@@ -79,11 +81,16 @@ def SerialWR(DataWr_list, Func, DataNum):
 					RdBytesLenSum += RdBytesLen
 					print (time.time() - tStart)	
 					print (ResponseNum)		
+				#Time Out	
+				if(0.05 < time.time()-tStart):	
+					RdTimeOut = True
+					RdError_list.append('TimeOut')
 					
 			print (DataRd_list)		
 			#Read Block End
 			
-	print ("Wire&Read is Over")     
+	print ("Wire&Read is Over")
+	print (RdError_list)
 
 	ser.close()
 	return 
