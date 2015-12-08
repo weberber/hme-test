@@ -35,7 +35,7 @@ def SerialWR(DevID, DataWr_list, Func, DataNum):
 	
 	ser = serial.Serial()
 	#ser.port = "/dev/ttyUSB0"
-	ser.port = "COM18"
+	ser.port = "COM4"
 	ser.baudrate = 115200
 	ser.timeout = None
 	#not stop
@@ -310,10 +310,23 @@ def TestPj2():
 	#ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list)
 	DW = ClientOp(DevID, Func, DataNum, [355, 358],[],[])
 	print(SerialWR(DevID, DW, Func, DataNum))
+
+def TestTimePj():
+	DevID = 0x01
+	#寫入新時間
+	Func = 'DiscWordWt'
+	DataNum = 6
+	DW = ClientOp(DevID, Func, DataNum, [50, 51, 52, 53, 54, 55], [2015, 6, 1, 6, 0, 0],[])
+	SerialWR(DevID, DW, Func, DataNum)
+	#重設新時間
+	Func = 'WordWt'
+	DataNum = 1
+	DW = ClientOp(DevID, Func, DataNum, [59], [1],[])
+	SerialWR(DevID, DW, Func, DataNum)
 	
 if __name__ == '__main__':
     
 	TestPj()
 	TestPj2()
-
+	TestTimePj()
 	
