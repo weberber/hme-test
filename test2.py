@@ -3,19 +3,19 @@ import serial
 import time
 
 def WordTo3Byte(u16word):
+	#用於將1Word資料編碼為3Byte
+	
+	#u8Byte:用於存放轉好的資料,元素=Bytet,長度=3
     u8Byte = [0x00,0x00,0x00]
+
+	
     u16Data = struct.pack("H", u16word)
-   
-    # s to 2B (byte)element
     u16wByte0, u16wByte1 =  struct.unpack("2B", u16Data)
-    #8bL, 8bH = 16w
 
     #move to u8B[2]    ok
     u8Byte[2] = u16wByte1 >> 6
-
     #move to u8B[0]    ok
     u8Byte[0] = u16wByte0 & 0x7f
-
     #move to u8B[1]          
     u16word = ( u16word << 1) & 0x7f00
     u16Data = struct.pack("H", u16word)
@@ -27,15 +27,19 @@ def WordTo3Byte(u16word):
     return u8Byte
 	
 def u3ByteToWord(u3Byte):
+	#將經編碼之3Byte資料解碼為1Word
 	return(u3Byte[0] + ((u3Byte[1]<<7)&0xff) + (((u3Byte[1]>>1) + (u3Byte[2]<<6))* 0x100))
 	
 
-def SerialWR(DevID, DataWr_list, Func, DataNum):
+def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
+	#將經編碼之資料由串列埠寫出,並接收與驗證回傳之資料
+	#DevID = 裝置ID, DataWr_list = 欲寫出之資料 ,Func = 記憶體操作
+	#DataNum = 欲寫出資料之長度(Word), RepeatNum = 重傳次數
 	u16ReData_list = []
 	
 	ser = serial.Serial()
 	#ser.port = "/dev/ttyUSB0"
-	ser.port = "COM4"
+	ser.port = "COM18"
 	ser.baudrate = 115200
 	ser.timeout = None
 	#not stop
@@ -77,7 +81,7 @@ def SerialWR(DevID, DataWr_list, Func, DataNum):
 					DataRd_list += (struct.unpack('%dB'%(RdBytesLen), DataRd))
 					RdBytesLenSum += RdBytesLen
 					print ('Time=', (time.time() - tStart)*1000,'ms')	
-					#print (ResponseNum)		
+					#print ('ResponseNum=', ResponseNum)		
 				#Time Out	
 				if(0.05 < time.time()-tStart):	
 					RdTimeOut = True
@@ -112,7 +116,7 @@ def SerialWR(DevID, DataWr_list, Func, DataNum):
 			#RespData_list = DataRd_list[0:len(DataRd_list)-3]
 			HeadIdComm_list = RespData_list[0:5]
 			#print('HIC_L=',HeadIdComm_list)					
-			if(HeadIdComm_list[0] != 0xc0 or HeadIdComm_list[1:4] != WordTo3Byte(DevID) or FuncCommTable[Func] != HeadIdComm_list[4] ) :
+			if(HeadIdComm_list[0] != 0xc0 or HeadIdComm_list[1:4] != WordTo3Byte(DevID) or FuncCommTable[Func] != HeadIdComm_list[4]):
 				RdError_list.append('FormatErr')
 				# !!
 				DataRd_list = []
@@ -181,6 +185,7 @@ def CopDiscWordWt(DevID, FuncCT, DataNum, Addr_list, DataIn_list):
 	u16ChkSum = u16ChkSum & 0xffff	
 	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
 	return DataOut_list
+	
 	
 def CopBitModify(DevID, FuncCT, DataNum, Addr_list, DataIn_list, Mask_list):
 	Header = 0x80
@@ -271,27 +276,35 @@ def CopDiscWordRd(DevID, FuncCT, DataNum, Addr_list):
 	return DataOut_list		
 	
 	
-def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list):
-
+def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list, RepeatNum):
+	
+	#要寫入串列通訊的資料
+	u16DataWt_list = []
+	
 	#CommTab_list = [0, 0, 17, 18, 33, 34, 49, 50]
 	FuncCommTable = {'Inital':0, 'Close':0, 'BitModify':17, 'BitInv':18, 'WordRd':33, 'DiscWordRd':34, 
 					'WordWt':49, 'DiscWordWt':50}
 
 	if(Func == 'DiscWordWt'):
-		return(CopDiscWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list))
+		u16DataWt_list = CopDiscWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list)
 	elif(Func == 'BitModify'):
-		return(CopBitModify(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list, Mask_list))
+		u16DataWt_list = CopBitModify(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list, Mask_list)
 	elif(Func == 'BitInv'):
-		return(CopBitInv(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, Mask_list))
+		u16DataWt_list = CopBitInv(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, Mask_list)
 	elif(Func == 'WordRd'):
-		return(CopWordRd(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list))
+		u16DataWt_list = CopWordRd(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list)
 	elif(Func == 'DiscWordRd'):
-		return(CopDiscWordRd(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list))
+		u16DataWt_list = CopDiscWordRd(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list)
 	elif(Func == 'WordWt'):
-		return(CopWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list))
+		u16DataWt_list = CopWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list)
 	else:
+		pass
 		print('ERROR')
+		#!!
 		return()
+		
+	#回傳串列通訊回饋資料(u16ReData_list)
+	return(SerialWR(DevID, u16DataWt_list, Func, DataNum, RepeatNum))
 
 def TestPj():
 	DevID = 0x01
@@ -299,8 +312,8 @@ def TestPj():
 	DataNum = 2
 	#Test Addr Range = 200~1000
 	#ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list)
-	DW = ClientOp(DevID, Func, DataNum, [355, 358], [0xffff,0xeeee],[])
-	SerialWR(DevID, DW, Func, DataNum)
+	print(ClientOp(DevID, Func, DataNum, [355, 358], [0xffff,0xeeee],[],0))
+	
 	
 def TestPj2():
 	DevID = 0x01
@@ -308,21 +321,19 @@ def TestPj2():
 	DataNum = 2
 	#Test Addr Range = 200~1000
 	#ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list)
-	DW = ClientOp(DevID, Func, DataNum, [355, 358],[],[])
-	print(SerialWR(DevID, DW, Func, DataNum))
+	print(ClientOp(DevID, Func, DataNum, [355, 358],[],[],0))
+
 
 def TestTimePj():
 	DevID = 0x01
 	#寫入新時間
 	Func = 'DiscWordWt'
 	DataNum = 6
-	DW = ClientOp(DevID, Func, DataNum, [50, 51, 52, 53, 54, 55], [2015, 6, 1, 6, 0, 0],[])
-	SerialWR(DevID, DW, Func, DataNum)
+	ClientOp(DevID, Func, DataNum, [50, 51, 52, 53, 54, 55], [2015, 6, 1, 6, 15, 0], [], 0)
 	#重設新時間
 	Func = 'WordWt'
 	DataNum = 1
-	DW = ClientOp(DevID, Func, DataNum, [59], [1],[])
-	SerialWR(DevID, DW, Func, DataNum)
+	print(ClientOp(DevID, Func, DataNum, [59], [1], [], 0))
 	
 if __name__ == '__main__':
     
