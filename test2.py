@@ -1,3 +1,5 @@
+#-*- coding: utf-8 -*-
+
 import struct
 import serial
 import time
@@ -35,122 +37,122 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 	#將經編碼之資料由串列埠寫出,並接收與驗證回傳之資料
 	#DevID = 裝置ID, DataWr_list = 欲寫出之資料 ,Func = 記憶體操作
 	#DataNum = 欲寫出資料之長度(Word), RepeatNum = 重傳次數
+	
+	#u16ReData_list:存放回傳資料
 	u16ReData_list = []
 	
 	ser = serial.Serial()
 	#ser.port = "/dev/ttyUSB0"
 	ser.port = "COM18"
 	ser.baudrate = 115200
+	#無timeout, 沒有接收到"足夠"資料時不會由COM Port停止等待
 	ser.timeout = None
-	#not stop
+	
 	FuncCommTable = {'Inital':0, 'Close':0, 'BitModify':17, 'BitInv':18, 'WordRd':33, 'DiscWordRd':34, 
 					'WordWt':49, 'DiscWordWt':50}
-	
+	#致能COM Port
 	ser.open()
 	
 	if ser.isOpen():
-	
-			print (ser.port, "is OK")
+		#若COM Port 正常啟動
+		print (ser.port, "is OK")
+		
+		#寫出資料
+		ser.write(DataWr_list[:])
 			
-			#Wire Block
-			print ("Wire is Start") 
-			#ser.write('\x80\x01\x00\x00\x32\x01\x00\x00\x00\x00\x00\x01\x00\x00\x35\x01\x00') 
-			ser.write(DataWr_list[:])
-			#Wire Block End
+		#以下為讀入資料之程式區塊
+		DataRd_list = []
+		RdBytesLen = 0
+		RdBytesLenSum = 0 
+		RdError_list = []
+		RdTimeOut = False
+		if(Func == 'WordRd' or Func == 'DiscWordRd'):
+			ResponseNum = (DataNum * 3) + 8
+		else:
+			ResponseNum = 8
 			
-			
-			#Read Block
+		print ("Read is Start")  			
+		tStart = time.time()
+		while(RdTimeOut != True and RdBytesLenSum < ResponseNum):				
+			if ser.inWaiting():
+				RdBytesLen = ser.inWaiting()
+				#DataRd_list = All Read Datas
+				DataRd=ser.read(RdBytesLen)
+				#Bytes to U8list
+				DataRd_list += (struct.unpack('%dB'%(RdBytesLen), DataRd))
+				RdBytesLenSum += RdBytesLen
+				print ('Time=', (time.time() - tStart)*1000,'ms')	
+				#print ('ResponseNum=', ResponseNum)		
+			#Time Out	
+			if(0.05 < time.time()-tStart):	
+				RdTimeOut = True
+				RdError_list.append('TimeOutErr')	
+		print('DataRd_list = ', DataRd_list)
+		#Read Over
+		
+		#Check RespNumErr
+		if(len(DataRd_list) != ResponseNum):
+			RdError_list.append('RespNumErr')
+			print('RespNumErr')
+			print(len(DataRd_list))
+			# !!
 			DataRd_list = []
-			RdBytesLen = 0
-			RdBytesLenSum = 0 
-			RdError_list = []
-			RdTimeOut = False
-			if(Func == 'WordRd' or Func == 'DiscWordRd'):
-				ResponseNum = (DataNum * 3) + 8
-			else:
-				ResponseNum = 8
-				
-			print ("Read is Start")  			
-			tStart = time.time()
-			while(RdTimeOut != True and RdBytesLenSum < ResponseNum):				
-				if ser.inWaiting():
-					RdBytesLen = ser.inWaiting()
-					#DataRd_list = All Read Datas
-					DataRd=ser.read(RdBytesLen)
-					#Bytes to U8list
-					DataRd_list += (struct.unpack('%dB'%(RdBytesLen), DataRd))
-					RdBytesLenSum += RdBytesLen
-					print ('Time=', (time.time() - tStart)*1000,'ms')	
-					#print ('ResponseNum=', ResponseNum)		
-				#Time Out	
-				if(0.05 < time.time()-tStart):	
-					RdTimeOut = True
-					RdError_list.append('TimeOutErr')	
-			print('DataRd_list = ', DataRd_list)
-			#Read Over
+			#return()
 			
-			#Check RespNumErr
-			if(len(DataRd_list) != ResponseNum):
-				RdError_list.append('RespNumErr')
-				print('RespNumErr')
-				print(len(DataRd_list))
-				# !!
-				DataRd_list = []
-				#return()
-				
-			#Check ChkSumErr
-			RespData_list = DataRd_list[0:len(DataRd_list)-3]
-			ChkSum_list = DataRd_list[len(DataRd_list)-3:len(DataRd_list)]
-			u16ReChkSum = sum(RespData_list) & 0xffff
-			u8ReChkSum_list = WordTo3Byte(u16ReChkSum)			
-			#print('ReD_L=',RespData_list)
-			#print('Chk_L=',ChkSum_list)
-			#print('16ReChk=', u16ReChkSum)		
-			#print( 'ReChk_L=', u8ReChkSum_list)			
-			if(ChkSum_list != u8ReChkSum_list):
-				RdError_list.append('ChkSumErr')
-				# !!
-				DataRd_list = []
-				
-			#Check FormatErr
-			#RespData_list = DataRd_list[0:len(DataRd_list)-3]
-			HeadIdComm_list = RespData_list[0:5]
-			#print('HIC_L=',HeadIdComm_list)					
-			if(HeadIdComm_list[0] != 0xc0 or HeadIdComm_list[1:4] != WordTo3Byte(DevID) or FuncCommTable[Func] != HeadIdComm_list[4]):
-				RdError_list.append('FormatErr')
-				# !!
-				DataRd_list = []
-				
-			#RAW to Data	
-			Re3BDataOut_list = []
-			BoolChk = 0
-			print('DR_L=',DataRd_list)			
-			ReData_list = DataRd_list[5:len(DataRd_list)-3]		
-			print('RD_L=',ReData_list)
-			print(DataRd_list)		
-			for i in range(0, (len(ReData_list)//3)):
-				Re3BDataOut_list.append(ReData_list[i*3:i*3+3] )
-			print('R3B_L=', Re3BDataOut_list)
-			#Chack FormatErr
-			if(Func == 'BitModify')	:
-				u16ReData_list = []
-				#Read Block End
-			else:
-				for i in range(0, len(Re3BDataOut_list)):
-					BoolChk +=  (Re3BDataOut_list[i][0] & 0x80)
-					BoolChk +=  (Re3BDataOut_list[i][1] & 0x80)
-					BoolChk +=  (Re3BDataOut_list[i][2] & 0xfc)
-				if(BoolChk == 0):
-					#Ok
-					for i in range(0, len(Re3BDataOut_list)):
-						u16ReData_list.append(u3ByteToWord(Re3BDataOut_list[i]) )
-					print('Data = ',u16ReData_list)
-					print ('Data = ', [hex(i) for i in u16ReData_list])
-				else:
-					RdError_list.append('FormatErr')
-					#!!
-					DataRd_list = []
+		#Check ChkSumErr
+		RespData_list = DataRd_list[0:len(DataRd_list)-3]
+		ChkSum_list = DataRd_list[len(DataRd_list)-3:len(DataRd_list)]
+		u16ReChkSum = sum(RespData_list) & 0xffff
+		u8ReChkSum_list = WordTo3Byte(u16ReChkSum)			
+		#print('ReD_L=',RespData_list)
+		#print('Chk_L=',ChkSum_list)
+		#print('16ReChk=', u16ReChkSum)		
+		#print( 'ReChk_L=', u8ReChkSum_list)			
+		if(ChkSum_list != u8ReChkSum_list):
+			RdError_list.append('ChkSumErr')
+			# !!
+			DataRd_list = []
+			
+		#Check FormatErr
+		#RespData_list = DataRd_list[0:len(DataRd_list)-3]
+		HeadIdComm_list = RespData_list[0:5]
+		#print('HIC_L=',HeadIdComm_list)					
+		if(HeadIdComm_list[0] != 0xc0 or HeadIdComm_list[1:4] != WordTo3Byte(DevID) or FuncCommTable[Func] != HeadIdComm_list[4]):
+			RdError_list.append('FormatErr')
+			# !!
+			DataRd_list = []
+			
+		#RAW to Data	
+		Re3BDataOut_list = []
+		BoolChk = 0
+		print('DR_L=',DataRd_list)			
+		ReData_list = DataRd_list[5:len(DataRd_list)-3]		
+		print('RD_L=',ReData_list)
+		print(DataRd_list)		
+		for i in range(0, (len(ReData_list)//3)):
+			Re3BDataOut_list.append(ReData_list[i*3:i*3+3] )
+		print('R3B_L=', Re3BDataOut_list)
+		#Chack FormatErr
+		if(Func == 'BitModify')	:
+			u16ReData_list = []
 			#Read Block End
+		else:
+			for i in range(0, len(Re3BDataOut_list)):
+				BoolChk +=  (Re3BDataOut_list[i][0] & 0x80)
+				BoolChk +=  (Re3BDataOut_list[i][1] & 0x80)
+				BoolChk +=  (Re3BDataOut_list[i][2] & 0xfc)
+			if(BoolChk == 0):
+				#Ok
+				for i in range(0, len(Re3BDataOut_list)):
+					u16ReData_list.append(u3ByteToWord(Re3BDataOut_list[i]) )
+				#毒入資料驗證完成, u16ReData_list = 讀入資料
+				print('Data = ',u16ReData_list)
+				print ('Data = ', [hex(i) for i in u16ReData_list])
+			else:
+				RdError_list.append('FormatErr')
+				#!!
+				DataRd_list = []
+		#以上為讀入資料之程式區塊
 						
 	print ("Wire&Read is Over")
 	if(len(RdError_list)):
