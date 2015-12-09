@@ -33,6 +33,7 @@ def u3ByteToWord(u3Byte):
 	return(u3Byte[0] + ((u3Byte[1]<<7)&0xff) + (((u3Byte[1]>>1) + (u3Byte[2]<<6))* 0x100))
 	
 def WordListToAdd3ByteList(WordDatat, Data_list):
+	#用於將WordTypeList編碼為3Byte,並加入3ByteTypeList中
 	for i in range(0,len(WordDatat)):
 		Data_list =  Data_list + WordTo3Byte(WordDatat[i]) 
 	return(Data_list)
@@ -299,11 +300,16 @@ def CopDiscWordRd(DevID, FuncCT, DataNum, Addr_list):
 	
 	
 def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list, RepeatNum):
+	#用於進行通訊,讀寫操作燈具裝置之記憶體
+	#DevID = 裝置ID, Func = 記憶體操作方式, DataNum = 資料長度(Word)
+	#Addr_list = 欲操作之(燈具)記憶體位址, Mask_list = 位元操作遮罩, RepeatNum = 重傳次數上限
+	
+	#Func:{'Inital':, 'Close':, 'BitModify':寫入特定位元, 'BitInv':翻轉特定位元, 'WordRd':讀取連續記憶體位置,
+	#	 'DiscWordRd':讀取非連續記憶體位置, 'WordWt':寫入連續記憶體位置, 'DiscWordWt':寫入非連續記憶體位置}
 	
 	#要寫入串列通訊的資料
 	u16DataWt_list = []
 	
-	#CommTab_list = [0, 0, 17, 18, 33, 34, 49, 50]
 	FuncCommTable = {'Inital':0, 'Close':0, 'BitModify':17, 'BitInv':18, 'WordRd':33, 'DiscWordRd':34, 
 					'WordWt':49, 'DiscWordWt':50}
 
@@ -323,11 +329,25 @@ def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list, RepeatNum)
 		pass
 		print('ERROR')
 		#!!
-		return()
-		
-	#回傳串列通訊回饋資料(u16ReData_list)
+		return()		
+	#透過串列通訊寫入(u16DataWt_list)並回傳回饋資料(u16ReData_list)
 	return(SerialWR(DevID, u16DataWt_list, Func, DataNum, RepeatNum))
 
+def SetDate(DevID, Date_y, Date_mth, Date_d, Date_h, Date_min, Date_s):
+	#寫入新時間
+	Func = 'DiscWordWt'
+	DataNum = 6
+	ClientOp(DevID, Func, DataNum, [50, 51, 52, 53, 54, 55], [Date_y, Date_mth, Date_d, Date_h, Date_min, Date_s], [], 0)
+	#重設新時間
+	Func = 'WordWt'
+	DataNum = 1
+	if (ClientOp(DevID, Func, DataNum, [59], [1], [], 0)):
+	#有資料回傳,表示更新成功
+		print('SetTiime Work')
+	else:
+		print('Setting up to fail')
+		
+	return()	
 	
 	
 def TestPj():
@@ -359,8 +379,8 @@ def TestTimePj():
 	print(ClientOp(DevID, Func, DataNum, [59], [1], [], 0))
 	
 def test(DA_list):
-	DAOut_list = []
-	return(DAOut_list)
+	
+	return(WordListToAdd3ByteList([1], DA_list))
 
 	
 if __name__ == '__main__':
