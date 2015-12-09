@@ -37,19 +37,19 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 	#將經編碼之資料由串列埠寫出,並接收與驗證回傳之資料
 	#DevID = 裝置ID, DataWr_list = 欲寫出之資料 ,Func = 記憶體操作
 	#DataNum = 欲寫出資料之長度(Word), RepeatNum = 重傳次數
-	
+
 	#u16ReData_list:存放回傳資料
 	u16ReData_list = []
-	
+
 	ser = serial.Serial()
 	#ser.port = "/dev/ttyUSB0"
 	ser.port = "COM18"
 	ser.baudrate = 115200
 	#無timeout, 沒有接收到"足夠"資料時不會由COM Port停止等待
 	ser.timeout = None
-	
+
 	FuncCommTable = {'Inital':0, 'Close':0, 'BitModify':17, 'BitInv':18, 'WordRd':33, 'DiscWordRd':34, 
-					'WordWt':49, 'DiscWordWt':50}
+				'WordWt':49, 'DiscWordWt':50}
 	#致能COM Port
 	ser.open()
 	
@@ -61,22 +61,32 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 		ser.write(DataWr_list[:])
 			
 		#以下為讀入資料之程式區塊
+		#DataRd_list:接收由串列埠回傳之資料
 		DataRd_list = []
+		#RdBytesLen:當前串列埠接收緩衝區內的資料(Byte)長度
 		RdBytesLen = 0
+		#RdBytesLenSum:本次已接收資料數
 		RdBytesLenSum = 0 
+		#RdError_list:錯誤訊息
 		RdError_list = []
+		#RdTimeOut:TimeOut旗標
 		RdTimeOut = False
+		
+		#設定不同操作所應獲得之回傳資料長度
 		if(Func == 'WordRd' or Func == 'DiscWordRd'):
 			ResponseNum = (DataNum * 3) + 8
 		else:
 			ResponseNum = 8
 			
-		print ("Read is Start")  			
+		print ("Read is Start") 
+		
+		#開始從串列埠接收資料,自訂TimeOut迴圈
 		tStart = time.time()
+		#若接收時間大於50ms 或 接收資料長度<=預定接收長度
 		while(RdTimeOut != True and RdBytesLenSum < ResponseNum):				
 			if ser.inWaiting():
+				#串列緩衝區內有資料, 取得資料長度並讀取
 				RdBytesLen = ser.inWaiting()
-				#DataRd_list = All Read Datas
 				DataRd=ser.read(RdBytesLen)
 				#Bytes to U8list
 				DataRd_list += (struct.unpack('%dB'%(RdBytesLen), DataRd))
@@ -88,8 +98,8 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 				RdTimeOut = True
 				RdError_list.append('TimeOutErr')	
 		print('DataRd_list = ', DataRd_list)
-		#Read Over
-		
+		#結束接收程序
+		#開始驗證資料正確性
 		#Check RespNumErr
 		if(len(DataRd_list) != ResponseNum):
 			RdError_list.append('RespNumErr')
