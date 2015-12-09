@@ -32,12 +32,19 @@ def u3ByteToWord(u3Byte):
 	#將經編碼之3Byte資料解碼為1Word
 	return(u3Byte[0] + ((u3Byte[1]<<7)&0xff) + (((u3Byte[1]>>1) + (u3Byte[2]<<6))* 0x100))
 	
-def WordListToAdd3ByteList(WordDatat, Data_list):
+def WordListToAdd3ByteList(WordDatat_list, Data_list):
 	#用於將WordTypeList編碼為3Byte,並加入3ByteTypeList中
-	for i in range(0,len(WordDatat)):
-		Data_list =  Data_list + WordTo3Byte(WordDatat[i]) 
+	for i in range(0,len(WordDatat_list)):
+		Data_list += WordTo3Byte(WordDatat_list[i]) 
 	return(Data_list)
 
+def DataListToChkSum3ByteList(DataList):
+	u16ChkSum = 0
+	for i in range(0,len(DataList)):
+		u16ChkSum = u16ChkSum + DataList[i]
+	u16ChkSum = u16ChkSum & 0xffff	
+	return(WordTo3Byte(u16ChkSum))
+	
 def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 	#將經編碼之資料由串列埠寫出,並接收與驗證回傳之資料後輸出
 	#DevID = 裝置ID, DataWr_list = 欲寫出之資料 ,Func = 記憶體操作
@@ -48,7 +55,7 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 
 	ser = serial.Serial()
 	#ser.port = "/dev/ttyUSB0"
-	ser.port = "COM18"
+	ser.port = "COM3"
 	ser.baudrate = 115200
 	#無timeout, 沒有接收到"足夠"資料時不會由COM Port停止等待
 	ser.timeout = None
@@ -96,13 +103,13 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 				#Bytes to U8list
 				DataRd_list += (struct.unpack('%dB'%(RdBytesLen), DataRd))
 				RdBytesLenSum += RdBytesLen
-				print ('Time=', (time.time() - tStart)*1000,'ms')	
+				#print ('Time=', (time.time() - tStart)*1000,'ms')	
 				#print ('ResponseNum=', ResponseNum)		
 			#Time Out	
 			if(0.05 < time.time()-tStart):	
 				RdTimeOut = True
 				RdError_list.append('TimeOutErr')	
-		print('DataRd_list = ', DataRd_list)
+		#print('DataRd_list = ', DataRd_list)
 		#結束接收程序
 		
 		#開始驗證資料正確性
@@ -110,7 +117,7 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 		if(len(DataRd_list) != ResponseNum):
 			RdError_list.append('RespNumErr')
 			print('RespNumErr')
-			print('RespNum=', ResponseNum,' DataRd_LNum=', len(DataRd_list))
+			#print('RespNum=', ResponseNum,' DataRd_LNum=', len(DataRd_list))
 			# !!
 			DataRd_list = []
 			#錯誤即結束
@@ -127,6 +134,7 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 		#print( 'ReChk_L=', u8ReChkSum_list)			
 		if(ChkSum_list != u8ReChkSum_list):
 			RdError_list.append('ChkSumErr')
+			print('ChkSumErr')
 			# !!
 			DataRd_list = []
 			#錯誤即結束
@@ -137,6 +145,7 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 		#print('HIC_L=',HeadIdComm_list)					
 		if(HeadIdComm_list[0] != 0xc0 or HeadIdComm_list[1:4] != WordTo3Byte(DevID) or FuncCommTable[Func] != HeadIdComm_list[4]):
 			RdError_list.append('FormatErr')
+			print('FormatErr')
 			# !!
 			DataRd_list = []
 			#錯誤即結束
@@ -151,7 +160,7 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 		#print(DataRd_list)		
 		for i in range(0, (len(ReData_list)//3)):
 			Re3BDataOut_list.append(ReData_list[i*3:i*3+3] )
-		print('R3B_L=', Re3BDataOut_list)
+		#print('R3B_L=', Re3BDataOut_list)
 		#Chack FormatErr
 		if(Func == 'BitModify')	:
 			#不需檢查回傳
@@ -167,15 +176,16 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 				for i in range(0, len(Re3BDataOut_list)):
 					u16ReData_list.append(u3ByteToWord(Re3BDataOut_list[i]) )
 				#毒入資料驗證完成, u16ReData_list = 讀入資料
-				print('Data = ',u16ReData_list)
-				print ('Data = ', [hex(i) for i in u16ReData_list])
+				#print('Data = ',u16ReData_list)
+				#print ('Data = ', [hex(i) for i in u16ReData_list])
 			else:
 				RdError_list.append('FormatErr')
+				print('FormatErr')
 				#!!
 				DataRd_list = []
 		#以上為讀入資料之程式區塊
 						
-	print ("Wire&Read is Over")
+	#print ("Wire&Read is Over")
 	if(len(RdError_list)):
 		print (RdError_list)
 
@@ -191,25 +201,7 @@ ClientOp()
 	|---CopWordRd
 	|---CopWordWt
 '''
-def CopDiscWordWt(DevID, FuncCT, DataNum, Addr_list, DataIn_list):
-	Header = 0x80
-	DataOut_list = []
-	u16ChkSum = 0
-	DataOut_list.append(Header) 
-	DataOut_list = DataOut_list + WordTo3Byte(DevID)
-	DataOut_list.append( FuncCT )
-	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
-	for i in range(0,len(Addr_list)):
-		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
-	for i in range(0,len(DataIn_list)):
-		DataOut_list =  DataOut_list + WordTo3Byte(DataIn_list[i]) 
-	for i in range(0,len(DataOut_list)):
-		u16ChkSum = u16ChkSum + DataOut_list[i]
-	u16ChkSum = u16ChkSum & 0xffff	
-	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
-	return DataOut_list
-	
-	
+
 def CopBitModify(DevID, FuncCT, DataNum, Addr_list, DataIn_list, Mask_list):
 	Header = 0x80
 	DataOut_list = []
@@ -218,16 +210,10 @@ def CopBitModify(DevID, FuncCT, DataNum, Addr_list, DataIn_list, Mask_list):
 	DataOut_list = DataOut_list + WordTo3Byte(DevID)
 	DataOut_list.append( FuncCT )
 	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
-	for i in range(0,len(Addr_list)):
-		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
-	for i in range(0,len(DataIn_list)):
-		DataOut_list =  DataOut_list + WordTo3Byte(DataIn_list[i]) 
-	for i in range(0,len(Mask_list)):
-		DataOut_list =  DataOut_list + WordTo3Byte(Mask_list[i]) 
-	for i in range(0,len(DataOut_list)):
-		u16ChkSum = u16ChkSum + DataOut_list[i]
-	u16ChkSum = u16ChkSum & 0xffff	
-	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
+	DataOut_list = WordListToAdd3ByteList(Addr_list, DataOut_list)
+	DataOut_list = WordListToAdd3ByteList(DataIn_list, DataOut_list)
+	DataOut_list = WordListToAdd3ByteList(Mask_list, DataOut_list)
+	DataOut_list += DataListToChkSum3ByteList(DataOut_list)
 	return DataOut_list		
 	
 def CopBitInv(DevID, FuncCT, DataNum, Addr_list, Mask_list):
@@ -238,14 +224,9 @@ def CopBitInv(DevID, FuncCT, DataNum, Addr_list, Mask_list):
 	DataOut_list = DataOut_list + WordTo3Byte(DevID)
 	DataOut_list.append( FuncCT )
 	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
-	for i in range(0,len(Addr_list)):
-		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
-	for i in range(0,len(Mask_list)):
-		DataOut_list =  DataOut_list + WordTo3Byte(Mask_list[i]) 
-	for i in range(0,len(DataOut_list)):
-		u16ChkSum = u16ChkSum + DataOut_list[i]
-	u16ChkSum = u16ChkSum & 0xffff	
-	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
+	DataOut_list = WordListToAdd3ByteList(Addr_list, DataOut_list)
+	DataOut_list = WordListToAdd3ByteList(Mask_list, DataOut_list)
+	DataOut_list += DataListToChkSum3ByteList(DataOut_list)
 	return DataOut_list		
 	
 def CopWordRd(DevID, FuncCT, DataNum, Addr_list):
@@ -257,30 +238,8 @@ def CopWordRd(DevID, FuncCT, DataNum, Addr_list):
 	DataOut_list.append( FuncCT )
 	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
 	DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[0]) 
-	for i in range(0,len(DataOut_list)):
-		u16ChkSum = u16ChkSum + DataOut_list[i]
-	u16ChkSum = u16ChkSum & 0xffff	
-	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
+	DataOut_list += DataListToChkSum3ByteList(DataOut_list)
 	return DataOut_list		
-
-def CopWordWt(DevID, FuncCT, DataNum, Addr_list, DataIn_list):
-
-	Header = 0x80
-	DataOut_list = []
-	u16ChkSum = 0
-	DataOut_list.append(Header) 
-	DataOut_list = DataOut_list + WordTo3Byte(DevID)
-	DataOut_list.append( FuncCT )
-	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
-	for i in range(0,len(Addr_list)):
-		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
-	for i in range(0,len(DataIn_list)):
-		DataOut_list =  DataOut_list + WordTo3Byte(DataIn_list[i]) 
-	for i in range(0,len(DataOut_list)):
-		u16ChkSum = u16ChkSum + DataOut_list[i]
-	u16ChkSum = u16ChkSum & 0xffff	
-	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
-	return DataOut_list	
 
 def CopDiscWordRd(DevID, FuncCT, DataNum, Addr_list):
 	Header = 0x80
@@ -290,14 +249,37 @@ def CopDiscWordRd(DevID, FuncCT, DataNum, Addr_list):
 	DataOut_list = DataOut_list + WordTo3Byte(DevID)
 	DataOut_list.append( FuncCT )
 	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
-	for i in range(0,len(Addr_list)):
-		DataOut_list =  DataOut_list + WordTo3Byte(Addr_list[i]) 
-	for i in range(0,len(DataOut_list)):
-		u16ChkSum = u16ChkSum + DataOut_list[i]
-	u16ChkSum = u16ChkSum & 0xffff	
-	DataOut_list = DataOut_list + WordTo3Byte(u16ChkSum)
+	DataOut_list = WordListToAdd3ByteList(Addr_list, DataOut_list)
+	DataOut_list += DataListToChkSum3ByteList(DataOut_list)
 	return DataOut_list		
 	
+def CopDiscWordWt(DevID, FuncCT, DataNum, Addr_list, DataIn_list):
+	Header = 0x80
+	DataOut_list = []
+	u16ChkSum = 0
+	DataOut_list.append(Header) 
+	DataOut_list = DataOut_list + WordTo3Byte(DevID)
+	DataOut_list.append( FuncCT )
+	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
+	DataOut_list = WordListToAdd3ByteList(Addr_list, DataOut_list)
+	DataOut_list = WordListToAdd3ByteList(DataIn_list, DataOut_list)
+	DataOut_list += DataListToChkSum3ByteList(DataOut_list)
+	return DataOut_list
+	
+def CopWordWt(DevID, FuncCT, DataNum, Addr_list, DataIn_list):
+
+	Header = 0x80
+	DataOut_list = []
+	u16ChkSum = 0
+	DataOut_list.append(Header) 
+	DataOut_list = DataOut_list + WordTo3Byte(DevID)
+	DataOut_list.append( FuncCT )
+	DataOut_list = DataOut_list + WordTo3Byte(DataNum)
+	DataOut_list = WordListToAdd3ByteList(Addr_list, DataOut_list)
+	DataOut_list = WordListToAdd3ByteList(DataIn_list, DataOut_list)
+	DataOut_list += DataListToChkSum3ByteList(DataOut_list)
+	return DataOut_list	
+
 	
 def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list, RepeatNum):
 	#用於進行通訊,讀寫操作燈具裝置之記憶體
@@ -309,7 +291,7 @@ def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list, RepeatNum)
 	
 	#要寫入串列通訊的資料
 	u16DataWt_list = []
-	
+	 
 	FuncCommTable = {'Inital':0, 'Close':0, 'BitModify':17, 'BitInv':18, 'WordRd':33, 'DiscWordRd':34, 
 					'WordWt':49, 'DiscWordWt':50}
 
@@ -327,13 +309,14 @@ def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list, RepeatNum)
 		u16DataWt_list = CopWordWt(DevID, (FuncCommTable[Func] & 0x7f), DataNum, Addr_list, DataIn_list)
 	else:
 		pass
-		print('ERROR')
+		print('ClientOp_Func_ERROR')
 		#!!
 		return()		
 	#透過串列通訊寫入(u16DataWt_list)並回傳回饋資料(u16ReData_list)
 	return(SerialWR(DevID, u16DataWt_list, Func, DataNum, RepeatNum))
 
 def SetDate(DevID, Date_y, Date_mth, Date_d, Date_h, Date_min, Date_s):
+	tStart = time.time()
 	#寫入新時間
 	Func = 'DiscWordWt'
 	DataNum = 6
@@ -345,8 +328,8 @@ def SetDate(DevID, Date_y, Date_mth, Date_d, Date_h, Date_min, Date_s):
 	#有資料回傳,表示更新成功
 		print('SetTiime Work')
 	else:
-		print('Setting up to fail')
-		
+		print('Setting is fail')
+	print( time.time() -tStart)
 	return()	
 	
 	
@@ -386,7 +369,7 @@ def test(DA_list):
 if __name__ == '__main__':
 
     
-	
+	SetDate(1, 2016, 11, 3, 6, 10, 0)
 	#TestPj()
 	#TestPj2()
 	#TestTimePj()
