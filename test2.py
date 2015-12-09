@@ -34,7 +34,7 @@ def u3ByteToWord(u3Byte):
 	
 
 def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
-	#將經編碼之資料由串列埠寫出,並接收與驗證回傳之資料
+	#將經編碼之資料由串列埠寫出,並接收與驗證回傳之資料後輸出
 	#DevID = 裝置ID, DataWr_list = 欲寫出之資料 ,Func = 記憶體操作
 	#DataNum = 欲寫出資料之長度(Word), RepeatNum = 重傳次數
 
@@ -99,15 +99,17 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 				RdError_list.append('TimeOutErr')	
 		print('DataRd_list = ', DataRd_list)
 		#結束接收程序
+		
 		#開始驗證資料正確性
 		#Check RespNumErr
 		if(len(DataRd_list) != ResponseNum):
 			RdError_list.append('RespNumErr')
 			print('RespNumErr')
-			print(len(DataRd_list))
+			print('RespNum=', ResponseNum,' DataRd_LNum=', len(DataRd_list))
 			# !!
 			DataRd_list = []
-			#return()
+			#錯誤即結束
+			return()
 			
 		#Check ChkSumErr
 		RespData_list = DataRd_list[0:len(DataRd_list)-3]
@@ -122,28 +124,32 @@ def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 			RdError_list.append('ChkSumErr')
 			# !!
 			DataRd_list = []
+			#錯誤即結束
+			return()
 			
 		#Check FormatErr
-		#RespData_list = DataRd_list[0:len(DataRd_list)-3]
 		HeadIdComm_list = RespData_list[0:5]
 		#print('HIC_L=',HeadIdComm_list)					
 		if(HeadIdComm_list[0] != 0xc0 or HeadIdComm_list[1:4] != WordTo3Byte(DevID) or FuncCommTable[Func] != HeadIdComm_list[4]):
 			RdError_list.append('FormatErr')
 			# !!
 			DataRd_list = []
+			#錯誤即結束
+			return()
 			
-		#RAW to Data	
+		#將原始接接收資料解碼( 3Byte to 1Word )	
 		Re3BDataOut_list = []
 		BoolChk = 0
-		print('DR_L=',DataRd_list)			
+		#print('DR_L=',DataRd_list)			
 		ReData_list = DataRd_list[5:len(DataRd_list)-3]		
-		print('RD_L=',ReData_list)
-		print(DataRd_list)		
+		#print('RD_L=',ReData_list)
+		#print(DataRd_list)		
 		for i in range(0, (len(ReData_list)//3)):
 			Re3BDataOut_list.append(ReData_list[i*3:i*3+3] )
 		print('R3B_L=', Re3BDataOut_list)
 		#Chack FormatErr
 		if(Func == 'BitModify')	:
+			#不需檢查回傳
 			u16ReData_list = []
 			#Read Block End
 		else:
@@ -318,6 +324,8 @@ def ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list, RepeatNum)
 	#回傳串列通訊回饋資料(u16ReData_list)
 	return(SerialWR(DevID, u16DataWt_list, Func, DataNum, RepeatNum))
 
+	
+	
 def TestPj():
 	DevID = 0x01
 	Func = 'DiscWordWt'
@@ -325,7 +333,6 @@ def TestPj():
 	#Test Addr Range = 200~1000
 	#ClientOp(DevID, Func, DataNum, Addr_list, DataIn_list, Mask_list)
 	print(ClientOp(DevID, Func, DataNum, [355, 358], [0xffff,0xeeee],[],0))
-	
 	
 def TestPj2():
 	DevID = 0x01
@@ -347,9 +354,14 @@ def TestTimePj():
 	DataNum = 1
 	print(ClientOp(DevID, Func, DataNum, [59], [1], [], 0))
 	
+def test(DA_list):
+	DAOut_list = []
+	return(DAOut_list)
+
+	
 if __name__ == '__main__':
-    
-	TestPj()
-	TestPj2()
-	TestTimePj()
+    print(test([2,3,4]))
+#	TestPj()
+#	TestPj2()
+	#TestTimePj()
 	
