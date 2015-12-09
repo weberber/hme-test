@@ -32,6 +32,10 @@ def u3ByteToWord(u3Byte):
 	#將經編碼之3Byte資料解碼為1Word
 	return(u3Byte[0] + ((u3Byte[1]<<7)&0xff) + (((u3Byte[1]>>1) + (u3Byte[2]<<6))* 0x100))
 	
+def WordListToAdd3ByteList(WordDatat, Data_list):
+	for i in range(0,len(WordDatat)):
+		Data_list =  Data_list + WordTo3Byte(WordDatat[i]) 
+	return(Data_list)
 
 def SerialWR(DevID, DataWr_list, Func, DataNum, RepeatNum):
 	#將經編碼之資料由串列埠寫出,並接收與驗證回傳之資料後輸出
@@ -360,8 +364,10 @@ def test(DA_list):
 
 	
 if __name__ == '__main__':
-    print(test([2,3,4]))
-#	TestPj()
-#	TestPj2()
-	#TestTimePj()
+
+    
 	
+	#TestPj()
+	#TestPj2()
+	#TestTimePj()
+	print(test([2,3,4]))
